@@ -123,7 +123,16 @@ app.post('/enroll/webauthn', function (req, res) {
   axios.post(req.session.next,{stateToken: req.body.state,attestation: req.body.attestationObject, clientData: req.body.clientData})
   .then(function(activation) {
     console.log(activation)
-    res.redirect('/profile')
+    if(activation.status == 200){
+      axios.post(activation._links.skip.href,{stateToken: activation.data.stateToken})
+      .then(function(skip) {
+        console.log(skip)
+        res.redirect('/profile')
+      })
+    }
+    else{
+      res.render('home',{error:JSON.stringify(err)});
+    }
   })
   .catch(function(err) {
     console.log("c")
