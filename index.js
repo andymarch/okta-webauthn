@@ -124,11 +124,15 @@ app.post('/enroll/webauthn', function (req, res) {
   .then(function(activation) {
     console.log(activation)
     if(activation.status == 200){
-      axios.post(activation._links.skip.href,{stateToken: activation.data.stateToken})
-      .then(function(skip) {
-        console.log(skip)
+      if(activation.data.status === 'MFA_ENROLL'){
+        axios.post(activation._links.skip.href,{stateToken: activation.data.stateToken})
+        .then(function(skip) {
+          console.log(skip)
+          res.redirect('/profile')
+        })
+      } else {
         res.redirect('/profile')
-      })
+      }
     }
     else{
       res.render('home',{error:JSON.stringify(err)});
