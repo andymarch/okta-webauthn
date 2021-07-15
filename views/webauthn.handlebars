@@ -1,0 +1,92 @@
+<form action="/login/webauthn" method="POST">
+    <h1>WebAuthN Prompt</h1>
+    <input name="state" id="state" value="{{stateToken}}">
+    <input name="clientData" id="clientData">
+    <input name="authenticatorData" id="authenticatorData">
+    <input name="signatureData" id="signatureData">
+    <button type="submit">Done</button>
+</form>
+
+<p id="error"></p>
+<!-- Using CryptoUtil.js from https://github.com/okta/okta-signin-widget/blob/master/src/util/CryptoUtil.js -->
+<script src="/static/js/CryptoUtil.js" type="text/javascript"></script> 
+<script>
+    // For factorId verification, convert activation object's challenge nonce from string to binary
+    var payload = {{{challenge}}}
+    console.log(payload.challenge)
+    payload.challenge = strToBin(payload.challenge);
+
+    // For factorType verification, the challenge nonce would be stored in challenge.challenge instead
+
+    // Call the WebAuthn javascript API to get signed assertion from the WebAuthn authenticator
+    if ('credentials' in navigator) {
+        navigator.credentials.get({
+            publicKey: payload
+        })
+        .then(function (assertion) {
+            console.log("inner")
+            // Get the client data, authenticator data, and signature data from callback result, convert from binary to string
+            var clientData = binToStr(assertion.response.clientDataJSON);
+            document.getElementById("clientData").value = clientData
+            var authenticatorData = binToStr(assertion.response.authenticatorData);
+            document.getElementById("authenticatorData").value = authenticatorData
+            var signatureData = binToStr(assertion.response.signature);
+            document.getElementById("signatureData").value = signatureData
+        })
+        .catch(function (error) {
+            // Error from WebAuthn platform
+            document.getElementById("error").innerHTML = error
+        });
+    } else {
+    //Handle sign-in the way you did before.
+    console.log("no credentials in navigator")
+    };
+
+
+
+
+    /**
+ * Light weight hashing algorithm that hashes string into an integer between 0 and 4294967295
+ * Not recommended for data set of size greater than 10000
+ * https://www.npmjs.com/package/string-hash
+ *
+ * @param str the string to be hashed
+ * @returns string hash of integer type
+ */
+getStringHash = function(str) {
+  let hash = 5381;
+  let i = str.length;
+
+  while (i) {
+    hash = (hash * 33) ^ str.charCodeAt(--i);
+  }
+  return hash >>> 0;
+};
+
+/**
+ * Converts any url safe characters in a base64 string to regular base64 characters
+ * @param str base64 string that might contain url safe characters
+ * @returns base64 formatted string
+ */
+base64UrlSafeToBase64 = function(str) {
+  return str.replace(new RegExp('_', 'g'), '/').replace(new RegExp('-', 'g'), '+');
+};
+
+/**
+ * Converts an ArrayBuffer object that contains binary data to base64 encoded string
+ * @param bin ArrayBuffer object
+ * @returns base64 encoded string
+ */
+binToStr = function(bin) {
+  return btoa(new Uint8Array(bin).reduce((s, byte) => s + String.fromCharCode(byte), ''));
+};
+
+/**
+ * Converts base64 string to binary data view
+ * @param str in base64 or base64UrlSafe format
+ * @returns converted Uint8Array view of binary data
+ */
+strToBin = function(str) {
+  return Uint8Array.from(atob(this.base64UrlSafeToBase64(str)), c => c.charCodeAt(0));
+};
+</script>
