@@ -25,7 +25,7 @@
         })
         .then(function (newCredential) {
             console.log("done")
-            document.getElementById("credentialId").innerText =newCredential.id
+            document.getElementById("credentialId").innerText = newCredential.id
             // Get attestation and clientData from callback result, convert from binary to string
             var attestation = binToStr(newCredential.response.attestationObject);
             document.getElementById("attestationObject").value = attestation
@@ -39,7 +39,7 @@
         });
     } else {
     //Handle sign-in the way you did before.
-    console.log("no credentials in navigator")
+    console.log("No credentials in navigator")
     };
 
 

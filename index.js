@@ -37,7 +37,7 @@ app.post('/login', function (req, res) {
     axios.post(process.env.ORG_URI+"/api/v1/authn",{username:req.body.username,password: req.body.password, options:{multiOptionalFactorEnroll: true,}})
       .then(function(transaction) {
         if (transaction.data.status === 'SUCCESS') {
-          res.redirect('/profile')
+          res.redirect('/profile',{stateToken: transaction.data.stateToken})
         } else if (transaction.data.status === 'MFA_REQUIRED') {
           var webauthn = transaction.data._embedded.factors.filter(ele => ele.factorType == "webauthn")
           if(webauthn.length>0){
@@ -66,7 +66,6 @@ app.post('/login', function (req, res) {
             })
             passwordFactor.verify()
             .then(function (verify){
-              console.log(verify)
               req.session.transaction = verify
               obj = verify
               res.render('password')
@@ -106,22 +105,17 @@ app.post('/login', function (req, res) {
 });
 
 app.post('/login/password', function (req, res) {
-  console.log("a")
   obj.verify({password: req.body.password})
   .then(function(transaction) {
-    console.log("b")
     console.log(transaction)
   })
   .catch(function(err) {
-    console.log("c")
     console.error(err);
     res.render('home',{error:JSON.stringify(err)});
   })
 })
 
 app.post('/enroll/webauthn', function (req, res) {
-  console.log("a")
-  console.log(req.session)
   axios.post(req.session.next,{stateToken: req.body.state,attestation: req.body.attestationObject, clientData: req.body.clientData})
   .then(function(activation) {
     console.log(activation)
@@ -129,11 +123,10 @@ app.post('/enroll/webauthn', function (req, res) {
       if(activation.data.status === 'MFA_ENROLL'){
         axios.post(activation.data._links.skip.href,{stateToken: activation.data.stateToken})
         .then(function(skip) {
-          console.log(skip)
-          res.redirect('/profile')
+          res.redirect('/profile',{stateToken: skip.data.stateToken, msg:"Other MFA enrollment was skipped."})
         })
       } else {
-        res.redirect('/profile')
+        res.redirect('/profile',{stateToken: activation.data.stateToken})
       }
     }
     else{
