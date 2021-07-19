@@ -136,24 +136,24 @@ app.post('/enroll/webauthn', function (req, res) {
     }
   })
   .catch(function(err) {
-    console.log("c")
     console.error(err);
     res.render('home',{error:JSON.stringify(err)});
   })
 })
 
 app.post('/login/webauthn', function (req, res) {
-  console.log(req.body)
-  console.log(req.session)
-
   axios.post(req.session.next,{
     stateToken: req.body.state,
     authenticatorData: req.body.authenticatorData, 
     clientData: req.body.clientData, 
     signatureData: req.body.signatureData})
   .then(function(authn) {
-    req.session.sessionToken = authn.data.sessionToken
-    res.redirect('/profile')
+    if(authn.data.status == "SUCCESS"){
+      req.session.sessionToken = authn.data.sessionToken
+      res.redirect('/profile')
+    } else{
+      res.render('home',{error:"Could not complete AuthN last status was "+authn.data.status});
+    }
   })
   .catch(function(err) {
     console.error(err);
