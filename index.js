@@ -37,7 +37,8 @@ app.post('/login', function (req, res) {
     axios.post(process.env.ORG_URI+"/api/v1/authn",{username:req.body.username,password: req.body.password, options:{multiOptionalFactorEnroll: true,}})
       .then(function(transaction) {
         if (transaction.data.status === 'SUCCESS') {
-          res.redirect('/profile',{stateToken: transaction.data.stateToken})
+          res.session.sessionToken = transaction.data.sessionToken
+          res.redirect('/profile')
         } else if (transaction.data.status === 'MFA_REQUIRED') {
           var webauthn = transaction.data._embedded.factors.filter(ele => ele.factorType == "webauthn")
           if(webauthn.length>0){
@@ -118,15 +119,16 @@ app.post('/login/password', function (req, res) {
 app.post('/enroll/webauthn', function (req, res) {
   axios.post(req.session.next,{stateToken: req.body.state,attestation: req.body.attestationObject, clientData: req.body.clientData})
   .then(function(activation) {
-    console.log(activation)
     if(activation.status == 200){
       if(activation.data.status === 'MFA_ENROLL'){
         axios.post(activation.data._links.skip.href,{stateToken: activation.data.stateToken})
         .then(function(skip) {
-          res.redirect('/profile',{stateToken: skip.data.stateToken, msg:"Other MFA enrollment was skipped."})
+          req.session.sessionToken = skip.data.sessionToken
+          res.redirect('/profile')
         })
       } else {
-        res.redirect('/profile',{stateToken: activation.data.stateToken})
+        req.session.sessionToken = activation.data.sessionToken
+        res.redirect('/profile')
       }
     }
     else{
@@ -143,11 +145,24 @@ app.post('/enroll/webauthn', function (req, res) {
 app.post('/login/webauthn', function (req, res) {
   console.log(req.body)
   console.log(req.session)
-  res.redirect('/profile')
+
+  axios.post(req.session.next,{
+    stateToken: req.body.state,
+    authenticatorData: req.body.authenticatorData, 
+    clientData: req.body.clientData, 
+    signatureData: req.body.signatureData})
+  .then(function(authn) {
+    req.session.sessionToken = authn.data.sessionToken
+    res.redirect('/profile')
+  })
+  .catch(function(err) {
+    console.error(err);
+    res.render('home',{error:JSON.stringify(err)});
+  })
 })
 
 app.get('/profile', function (req, res) {
-  res.render('profile');
+  res.render('profile', {sessionToken: req.session.sessionToken});
 })
 
 const PORT = process.env.PORT || 3000;
