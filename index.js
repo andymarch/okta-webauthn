@@ -41,7 +41,8 @@ app.post('/login', function (req, res) {
         } else if (transaction.data.status === 'MFA_REQUIRED') {
           var webauthn = transaction.data._embedded.factors.filter(ele => ele.factorType == "webauthn")
           if(webauthn.length>0){
-              console.log(webauthn[0])
+              console.log(webauthn)
+              var authid = webauthn[0].profile.credentialId
               axios.post(webauthn[0]._links.verify.href,{stateToken: transaction.data.stateToken})
               .then(function(verify) {
                 req.session.next = verify.data._links.next.href
@@ -49,7 +50,8 @@ app.post('/login', function (req, res) {
                 res.render('webauthn',
                 {
                   stateToken: verify.data.stateToken,
-                  challenge: JSON.stringify(verify.data._embedded.factor._embedded.challenge)
+                  challenge: JSON.stringify(verify.data._embedded.factor._embedded.challenge),
+                  authid: authid
                 })
               })
               .catch(function(err) {
@@ -125,7 +127,7 @@ app.post('/enroll/webauthn', function (req, res) {
     console.log(activation)
     if(activation.status == 200){
       if(activation.data.status === 'MFA_ENROLL'){
-        axios.post(activation._links.skip.href,{stateToken: activation.data.stateToken})
+        axios.post(activation.data._links.skip.href,{stateToken: activation.data.stateToken})
         .then(function(skip) {
           console.log(skip)
           res.redirect('/profile')

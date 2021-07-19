@@ -1,5 +1,6 @@
 <form action="/login/webauthn" method="POST">
     <h1>WebAuthN Prompt</h1>
+    <div>Looking for credential <span id="credentialId"></span></div>
     <input name="state" id="state" value="{{stateToken}}">
     <input name="clientData" id="clientData">
     <input name="authenticatorData" id="authenticatorData">
@@ -11,17 +12,32 @@
 <!-- Using CryptoUtil.js from https://github.com/okta/okta-signin-widget/blob/master/src/util/CryptoUtil.js -->
 <script src="/static/js/CryptoUtil.js" type="text/javascript"></script> 
 <script>
+
+  if (navigator.credentials 
+    && navigator.credentials.preventSilentAccess) {
+      console.log("good cred manager state")
+    }
+    document.getElementById("credentialId").innerText = "{{{authid}}}"
     // For factorId verification, convert activation object's challenge nonce from string to binary
     var payload = {{{challenge}}}
-    console.log(payload.challenge)
-    payload.challenge = strToBin(payload.challenge);
-
+    const allowCredentials = [];
+    allowCredentials.push({
+          type: 'public-key',
+          id: strToBin("{{{authid}}}"),
+        });
     // For factorType verification, the challenge nonce would be stored in challenge.challenge instead
+    const options = {
+      allowCredentials,
+      userVerification: payload.userVerification,
+      challenge: strToBin(payload.challenge),
+    };
+
+    console.log(JSON.stringify(options))
 
     // Call the WebAuthn javascript API to get signed assertion from the WebAuthn authenticator
     if ('credentials' in navigator) {
         navigator.credentials.get({
-            publicKey: payload
+            publicKey: options
         })
         .then(function (assertion) {
             console.log("inner")

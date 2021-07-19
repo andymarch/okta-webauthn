@@ -4,6 +4,8 @@
     <input name="clientData" id="clientData">
     <input name="attestationObject" id="attestationObject">
     <button type="submit">Done</button>
+
+    <div>Credential ID<span id="credentialId"></span></div>
 </form>
 
 <!-- Using CryptoUtil.js from https://github.com/okta/okta-signin-widget/blob/master/src/util/CryptoUtil.js -->
@@ -23,7 +25,7 @@
         })
         .then(function (newCredential) {
             console.log("done")
-            console.log(newCredential)
+            document.getElementById("credentialId").innerText =newCredential.id
             // Get attestation and clientData from callback result, convert from binary to string
             var attestation = binToStr(newCredential.response.attestationObject);
             document.getElementById("attestationObject").value = attestation
